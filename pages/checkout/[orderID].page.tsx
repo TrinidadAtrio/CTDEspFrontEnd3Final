@@ -2,21 +2,37 @@ import type {NextPage} from 'next'
 import Head from 'next/head'
 import BodySingle from "dh-marvel/components/layouts/body/single/body-single";
 import TextField from '@mui/material/TextField';
-import { Box, Typography, type SxProps, Stepper, Step, StepButton, StepLabel, Button, Paper, Grid } from '@mui/material';
+import { Box, Typography, type SxProps, Stepper, Step, StepButton, StepLabel, Button, Paper, Grid, Collapse } from '@mui/material';
 import { useState } from 'react';
 import style from '../../styles/commons.module.css';
 import { useForm } from 'react-hook-form';
+import { CheckoutInput } from 'dh-marvel/features/checkout/checkout.types';
+
+const checkoutURL = (() => {
+  const domain = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'http://vercel.com/';
+  const url = new URL('/api/checkout', domain)
+  return url.href;
+})();
 
 const checkoutSteps = ['Datos personales', 'Entrega', 'Pago'];
 
 const CheckoutPage: NextPage = () => {
   const [activeStep, setActiveStep] = useState(0)
-  const { register, handleSubmit, formState: { errors }, watch } = useForm();
+  const { register, handleSubmit, formState: { errors }, watch, trigger, clearErrors } = useForm<CheckoutInput>();
   const watchedFields = watch();
-
-  const handleNextStep = () => {
-    if (activeStep < checkoutSteps.length - 1) {
+  console.log({watchedFields})
+  const handleNextStep = async () => {
+    await trigger();
+    const valitationsPerStep = {
+      0: !Boolean(errors.customer?.name || errors.customer?.lastname || errors.customer?.email),
+      1: !Boolean(errors.customer?.address),
+      2: true,
+    }
+    const validFields = valitationsPerStep[activeStep as keyof typeof valitationsPerStep];
+    console.log({validFields});
+    if (validFields && activeStep < checkoutSteps.length - 1) {
       setActiveStep((step) => step + 1);
+      clearErrors();
     }
   };
 
@@ -26,27 +42,24 @@ const CheckoutPage: NextPage = () => {
     }
   };
 
-  console.log(errors);
-
   const onSubmit = async (result: any) => {
-    console.log({errors});
     console.log({result});
-    
-    // const result = await handleSubmit((data) => data)() as unknown as Record<string, string>;
-    // if (result) {
-    //     if (!result.nombre || !result.apellido || !result.email) {
-    //         setActiveStep(0);
-    //         return;
-    //     }
-    //     if (!result.direccion || !result.ciudad || !result.provincia || !result.codigoPostal) {
-    //         setActiveStep(1);
-    //         return;
-    //     }
-    //     if (!result.numeroTarjeta || !result.nombreTarjeta || !result.fechaExpiracion || !result.codigoSeguridad) {
-    //         setActiveStep(2);
-    //         return;
-    //     }
-    // }
+    try {
+      const body = { ...result, order: {
+        name: 'spiderman',
+        image: 'https://google.com.ar',
+        price: 100.0,
+      }}
+      await fetch(checkoutURL, {
+        method: 'POST',
+        body
+      });
+
+      window.location.href = 'http://localhost:3000/checkout/success';
+    } catch (err) {
+      
+    }
+
   }
 
     return (
@@ -67,73 +80,88 @@ const CheckoutPage: NextPage = () => {
               ))}
             </Stepper>
             <form onSubmit={handleSubmit(onSubmit)}>
-              {activeStep === 0 && (
-                <>
-                  <Typography pb={1}>Datos personales</Typography>
+              
+                <Collapse in={activeStep === 0}>
+                  {/* <Typography pb={1}>Datos personales</Typography> */}
                   <Grid container spacing={3}>
                     <Grid item xs={12}>
                       <TextField fullWidth variant="outlined" label="Nombre"
-                        {...register('name', { required: 'Este campo es obligatorio' })}
-                        error={Boolean(errors.name)}
+                        {...register('customer.name', { required: true })}
+                        error={Boolean(errors.customer?.name)}
                       />
                     </Grid>
                     <Grid item xs={12}>
                       <TextField fullWidth variant="outlined" label="Apellido"
-                      {...register('surname', { required: 'Este campo es obligatorio' })}
-                        error={Boolean(errors.surname)}
+                      {...register('customer.lastname', { required: true })}
+                        error={Boolean(errors.customer?.lastname)}
                       />
                     </Grid>
                     <Grid item xs={12}>
-                      <TextField fullWidth variant="outlined" label="Email" type="email"
-                      {...register('email', { required: 'Este campo es obligatorio', pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i, message: "Email inválido" } })} error={Boolean(errors.email)}
+                      <TextField fullWidth variant="outlined" label="Email"
+                        {...register('customer.email',
+                          { required: true,
+                            pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i, message: "Email inválido" }
+                          })
+                        }
+                        error={Boolean(errors.customer?.email)}
                       />
                     </Grid>
                   </Grid>
-                </>
-              )}
-
-              {activeStep === 1 && (
-                <>
-                  <Typography pb={1}>Datos de la entrega</Typography>
+                </Collapse>
+                <Collapse in={activeStep === 1}>
+                  {/* <Typography pb={1}>Datos de la entrega</Typography> */}
+                  
                   <Grid container spacing={3}>
                     <Grid item xs={12}>
-                      <TextField fullWidth variant="outlined" label="Dirección" {...register('address', { required: 'Este campo es obligatorio' })} error={Boolean(errors.address)} />
+                      <TextField fullWidth variant="outlined" label="Dirección" {...register('customer.address.address1', { required: 'Este campo es obligatorio' })}
+                        error={Boolean(errors.customer?.address?.address1)} />
                     </Grid>
                     <Grid item xs={12}>
-                      <TextField fullWidth variant="outlined" label="Departamento, piso, etc" {...register('apartment')} />
+                      <TextField fullWidth variant="outlined" label="Departamento, piso, etc" {...register('customer.address.address2')} />
                     </Grid>
                     <Grid item xs={12}>
-                      <TextField fullWidth variant="outlined" label="Ciudad" {...register('city', { required: 'Este campo es obligatorio' })} error={Boolean(errors.city)} />
+                      <TextField fullWidth variant="outlined" label="Ciudad"
+                        {...register('customer.address.city', { required: 'Este campo es obligatorio' })}
+                        error={Boolean(errors.customer?.address?.city)} />
                     </Grid>
                     <Grid item xs={12}>
-                      <TextField fullWidth variant="outlined" label="Provincia" {...register('state', { required: 'Este campo es obligatorio' })} error={Boolean(errors.state)} />
+                      <TextField fullWidth variant="outlined" label="Provincia"
+                      {...register('customer.address.state', { required: 'Este campo es obligatorio' })}
+                      error={Boolean(errors.customer?.address?.state)} />
                     </Grid>
                     <Grid item xs={12}>
-                      <TextField fullWidth variant="outlined" label="Código Postal" {...register('zipCode', { required: 'Este campo es obligatorio' })} error={Boolean(errors.zipCode)} />
+                      <TextField fullWidth variant="outlined" label="Código Postal"
+                      {...register('customer.address.zipCode', { required: 'Este campo es obligatorio' })}
+                      error={Boolean(errors.customer?.address?.zipCode)} />
                     </Grid>
                   </Grid>
-                </>
-              )}
+                </Collapse>
 
-              {activeStep === 2 && (
-                <>
-                  <Typography pb={1}>Datos del Pago</Typography>
+                <Collapse in={activeStep === 2}>
+                  {/* <Typography pb={1}>Datos del Pago</Typography> */}
                   <Grid container spacing={3}>
                     <Grid item xs={12}>
-                      <TextField fullWidth variant="outlined" label="Número de Tarjeta" {...register('cardNumber', { required: 'Este campo es obligatorio' })} error={Boolean(errors.cardNumber)} />
+                      <TextField fullWidth variant="outlined" label="Número de Tarjeta"
+                      {...register('card.number', { required: 'Este campo es obligatorio' })}
+                      error={Boolean(errors.card?.number)} />
                     </Grid>
                     <Grid item xs={12}>
-                      <TextField fullWidth variant="outlined" label="Nombre en la Tarjeta" {...register('cardName', { required: 'Este campo es obligatorio' })} error={Boolean(errors.cardName)} />
+                      <TextField fullWidth variant="outlined" label="Nombre en la Tarjeta"
+                      {...register('card.nameOnCard', { required: 'Este campo es obligatorio' })}
+                      error={Boolean(errors.card?.nameOnCard)} />
                     </Grid>
                     <Grid item xs={12}>
-                      <TextField fullWidth variant="outlined" label="Fecha de Expiración" {...register('expirationDate', { required: 'Este campo es obligatorio' })} error={Boolean(errors.expirationDate)} />
+                      <TextField fullWidth variant="outlined" label="Fecha de Expiración"
+                      {...register('card.expDate', { required: 'Este campo es obligatorio' })}
+                      error={Boolean(errors.card?.expDate)} />
                     </Grid>
                     <Grid item xs={12}>
-                      <TextField fullWidth variant="outlined" type="password" label="Código de Seguridad" {...register('securityCode', { required: 'Este campo es obligatorio' })} error={Boolean(errors.securityCode)} />
+                      <TextField fullWidth variant="outlined" type="password" label="Código de Seguridad"
+                      {...register('card.cvc', { required: 'Este campo es obligatorio' })}
+                      error={Boolean(errors.card?.cvc)} />
                     </Grid>
                   </Grid>
-                </>
-              )}
+                </Collapse>
               <div>
                 <Button variant="contained" color="secondary" onClick={handleBackStep} disabled={activeStep === 0}>
                   Anterior
