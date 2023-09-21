@@ -1,12 +1,14 @@
-import type {NextPage} from 'next'
+import type {GetServerSideProps, NextPage} from 'next'
 import Head from 'next/head'
 import BodySingle from "dh-marvel/components/layouts/body/single/body-single";
 import TextField from '@mui/material/TextField';
-import { Box, Typography, type SxProps, Stepper, Step, StepButton, StepLabel, Button, Paper, Grid, Collapse, Snackbar, Alert } from '@mui/material';
+import { Box, Typography, type SxProps, Stepper, Step, StepButton, StepLabel, Button, Paper, Grid, Collapse, Snackbar, Alert, Card, CardMedia, CardContent } from '@mui/material';
 import { useState } from 'react';
 import style from '../../styles/commons.module.css';
 import { useForm } from 'react-hook-form';
 import { CheckoutInput } from 'dh-marvel/features/checkout/checkout.types';
+import { GetStaticProps } from 'next';
+import { getComic } from 'dh-marvel/services/marvel/marvel.service';
 
 const checkoutURL = (() => {
   const domain = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'http://vercel.com/';
@@ -21,10 +23,12 @@ interface ApiErrorResponse {
   message: string;
 }
 
-const CheckoutPage: NextPage = () => {
+const CheckoutPage: NextPage = ({ order }) => {
   const [activeStep, setActiveStep] = useState(0)
   const [response, setResponse] = useState<ApiErrorResponse>();
   const { register, handleSubmit, formState: { errors }, watch, trigger, clearErrors } = useForm<CheckoutInput>();
+
+
   const watchedFields = watch();
   console.log({watchedFields, errors})
   const handleNextStep = async () => {
@@ -50,11 +54,7 @@ const CheckoutPage: NextPage = () => {
   const onSubmit = async (result: any) => {
     console.log({result});
     try {
-      const body = JSON.stringify({ ...result, order: {
-        name: 'spiderman',
-        image: 'https://google.com.ar',
-        price: 100.0,
-      }})
+      const body = JSON.stringify({ ...result, ...order})
       const res = await fetch(checkoutURL, {
         method: 'POST',
         headers: {
@@ -200,8 +200,41 @@ const CheckoutPage: NextPage = () => {
             </Snackbar>
           </BodySingle>
           </Paper>
+          <Grid item xs={6}>
+            <Card>
+              <CardMedia
+                component="img"
+                alt={order.name}
+                height="140"
+                image={order.image}
+                title={order.name}
+              />
+              <CardContent>
+                <Typography variant="h5" component="div">{order.name}</Typography>
+                <Typography variant="body2" color="text.secondary">
+                  Precio: ${order.price}
+                </Typography>
+              </CardContent>
+            </Card>
+        </Grid>
         </>
     )
 }
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const comicId = parseInt(context.params!.orderID as string);
+  const comic = await getComic(comicId);
+  const image = comic.images[0] ?? {};
+
+  return {
+    props: {
+      order: {
+        name: comic.title || '',
+        image: `${image.path}.${image.extension}` ?? '',
+        price: comic.price || 0,
+      }
+    },
+  };
+};
 
 export default CheckoutPage
