@@ -2,7 +2,7 @@ import type {NextPage} from 'next'
 import Head from 'next/head'
 import BodySingle from "dh-marvel/components/layouts/body/single/body-single";
 import TextField from '@mui/material/TextField';
-import { Box, Typography, type SxProps, Stepper, Step, StepButton, StepLabel, Button, Paper, Grid, Collapse } from '@mui/material';
+import { Box, Typography, type SxProps, Stepper, Step, StepButton, StepLabel, Button, Paper, Grid, Collapse, Snackbar, Alert } from '@mui/material';
 import { useState } from 'react';
 import style from '../../styles/commons.module.css';
 import { useForm } from 'react-hook-form';
@@ -16,23 +16,28 @@ const checkoutURL = (() => {
 
 const checkoutSteps = ['Datos personales', 'Entrega', 'Pago'];
 
+interface ApiErrorResponse {
+  error: string;
+  message: string;
+}
+
 const CheckoutPage: NextPage = () => {
   const [activeStep, setActiveStep] = useState(0)
+  const [response, setResponse] = useState<ApiErrorResponse>();
   const { register, handleSubmit, formState: { errors }, watch, trigger, clearErrors } = useForm<CheckoutInput>();
   const watchedFields = watch();
-  console.log({watchedFields})
+  console.log({watchedFields, errors})
   const handleNextStep = async () => {
     await trigger();
     const valitationsPerStep = {
       0: !Boolean(errors.customer?.name || errors.customer?.lastname || errors.customer?.email),
       1: !Boolean(errors.customer?.address),
-      2: true,
+      2: !Boolean(errors.card),
     }
     const validFields = valitationsPerStep[activeStep as keyof typeof valitationsPerStep];
-    console.log({validFields});
     if (validFields && activeStep < checkoutSteps.length - 1) {
-      setActiveStep((step) => step + 1);
       clearErrors();
+      setActiveStep((step) => step + 1);
     }
   };
 
@@ -45,19 +50,28 @@ const CheckoutPage: NextPage = () => {
   const onSubmit = async (result: any) => {
     console.log({result});
     try {
-      const body = { ...result, order: {
+      const body = JSON.stringify({ ...result, order: {
         name: 'spiderman',
         image: 'https://google.com.ar',
         price: 100.0,
-      }}
-      await fetch(checkoutURL, {
+      }})
+      const res = await fetch(checkoutURL, {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body
-      });
+      })
 
-      window.location.href = 'http://localhost:3000/checkout/success';
+      if (res.ok) {
+        window.location.href = 'http://localhost:3000/checkout/success';
+      } else {
+        const error = await res.json();
+        setResponse(error);
+        console.log(res.status)
+      }
     } catch (err) {
-      
+      console.log(err);
     }
 
   }
@@ -100,7 +114,9 @@ const CheckoutPage: NextPage = () => {
                       <TextField fullWidth variant="outlined" label="Email"
                         {...register('customer.email',
                           { required: true,
-                            pattern: { value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i, message: "Email inválido" }
+                            pattern: {
+                              value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,4}$/i,
+                              message: "Email inválido" }
                           })
                         }
                         error={Boolean(errors.customer?.email)}
@@ -177,6 +193,11 @@ const CheckoutPage: NextPage = () => {
                   )}
               </div>
             </form>
+            <Snackbar open={!!(response?.error)} autoHideDuration={2000}>
+              <Alert severity="error" variant="filled">
+                {response?.message}
+              </Alert>
+            </Snackbar>
           </BodySingle>
           </Paper>
         </>
