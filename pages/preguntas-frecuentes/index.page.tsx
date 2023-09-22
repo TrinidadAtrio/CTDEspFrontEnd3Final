@@ -54,7 +54,7 @@ const FaqsPage: NextPage<Props> = ({faqs}) => {
 }
 
 export const getStaticProps = async () =>{
-    const res = await fetch(`https://ctd-esp-front-end3-final.vercel.app/api/faqs`) 
+    const res = await fetch(`${process.env.BASE_URL}/api/faqs`) 
     const faqs = await res.json()
     console.log(faqs)
 
