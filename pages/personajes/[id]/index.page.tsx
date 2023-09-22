@@ -1,5 +1,5 @@
 import React from 'react'
-import { Personaje } from 'interfaces'
+import { Personaje } from 'interfaces/character';
 import { GetServerSideProps, GetStaticPaths, GetStaticProps, NextPage } from 'next'
 import { Avatar, Card, CardContent, CardHeader, CardMedia, IconButton, Typography } from '@mui/material'
 import { getCharacter } from 'dh-marvel/services/marvel/marvel.service'

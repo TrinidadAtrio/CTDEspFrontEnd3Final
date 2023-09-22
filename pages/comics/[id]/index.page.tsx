@@ -1,7 +1,7 @@
 import React from 'react'
 import { GetStaticPaths, GetStaticProps, NextPage } from 'next';
 import { getComic, getComics } from 'dh-marvel/services/marvel/marvel.service';
-import { Comic, ComicIndividual } from 'interfaces';
+import { Comic, ComicIndividual } from 'interfaces/comics';
 import { Box, Card, CardContent, CardMedia, Typography, Button, Accordion, AccordionSummary, AccordionDetails } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Head from 'next/head';
