@@ -9,6 +9,10 @@ import { useForm } from 'react-hook-form';
 import { CheckoutInput } from 'dh-marvel/features/checkout/checkout.types';
 import { GetStaticProps } from 'next';
 import { getComic } from 'dh-marvel/services/marvel/marvel.service';
+import LayoutCheckout from 'dh-marvel/components/layouts/layout-checkout';
+import { useRouter } from 'next/router';
+import { Cookies } from 'next/dist/server/web/spec-extension/cookies';
+import { rest } from 'msw';
 
 const checkoutURL = (() => {
   const domain = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'http://vercel.com/';
@@ -27,7 +31,8 @@ const CheckoutPage: NextPage = ({ order }) => {
   const [activeStep, setActiveStep] = useState(0)
   const [response, setResponse] = useState<ApiErrorResponse>();
   const { register, handleSubmit, formState: { errors }, watch, trigger, clearErrors } = useForm<CheckoutInput>();
-
+  
+  const router = useRouter()
 
   const watchedFields = watch();
   console.log({watchedFields, errors})
@@ -62,9 +67,18 @@ const CheckoutPage: NextPage = ({ order }) => {
         },
         body
       })
-
+      const response = await res.json()
       if (res.ok) {
-        window.location.href = 'http://localhost:3000/checkout/success';
+        Cookies.set("compraOk", true)
+        router.push({
+          pathname: '/confirmacion-compra',
+          query: {
+            //comicName: response.result
+
+          }
+        }
+        )
+        window.location.href = 'http://localhost:3000/confirmacion-compra';
       } else {
         const error = await res.json();
         setResponse(error);
@@ -236,5 +250,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     },
   };
 };
+
+(CheckoutPage as any).Layout = LayoutCheckout
 
 export default CheckoutPage
