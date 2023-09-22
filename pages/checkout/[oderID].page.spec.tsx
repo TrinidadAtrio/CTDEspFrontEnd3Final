@@ -199,7 +199,7 @@ describe('Checkout Page', () => {
         fireEvent.click(component.getByText('Enviar'));
       });
 
-      expect(assign).toHaveBeenCalledWith('http://vercel.com/confirmacion-compra?productName=New+X-Men+%282001%29+%23150&img=http%3A%2F%2Fi.annihil.us%2Fu%2Fprod%2Fmarvel%2Fi%2Fmg%2Fd%2F10%2F577e6cfba4e76.jpg&orderPrice=10&address=San+Martin+123&name=Pepe+Sapo')
+      expect(assign).toHaveBeenCalledWith('https://ctd-esp-front-end3-final.vercel.app/confirmacion-compra?productName=New+X-Men+%282001%29+%23150&img=http%3A%2F%2Fi.annihil.us%2Fu%2Fprod%2Fmarvel%2Fi%2Fmg%2Fd%2F10%2F577e6cfba4e76.jpg&orderPrice=10&address=San+Martin+123&name=Pepe+Sapo')
     });
   
     it('Should render error snackbar when card has not enough funds', async () => {

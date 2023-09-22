@@ -9,7 +9,7 @@ import { CheckoutInput } from 'dh-marvel/features/checkout/checkout.types';
 import { getComic } from 'dh-marvel/services/marvel/marvel.service';
 
 
-const domain = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'http://vercel.com/';
+const domain = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'https://ctd-esp-front-end3-final.vercel.app';
 
 const checkoutURL = new URL('/api/checkout', domain).href;
 
