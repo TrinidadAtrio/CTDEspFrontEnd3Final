@@ -10,9 +10,7 @@ const ConfirmationPage: NextPage = () => {
 
   return (
     <>
-    <BodySingle title='Compra exitosa'>
-      <Typography>Que disfrutes tu compra</Typography> 
-
+    <BodySingle title='Que disfrutes tu compra'>
       <Grid container>
         <Grid item xs={4}>
           <Card>
@@ -25,7 +23,6 @@ const ConfirmationPage: NextPage = () => {
             />
             <CardContent>
               <Typography variant="h5">{productName}</Typography>
-
               <Typography variant="h6">Comprador: {name}</Typography>
               <Typography variant="h6">Envio a: {address}</Typography>
               <Typography variant="body2" color="text.secondary">
