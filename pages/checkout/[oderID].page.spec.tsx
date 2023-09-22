@@ -8,6 +8,8 @@ const order = {
   price: 10,
 };
 
+const realFetch = global.fetch;
+
 describe('Checkout Page', () => {
   const assign = jest.fn();
 
@@ -21,6 +23,10 @@ describe('Checkout Page', () => {
     });
 
   });
+
+  afterAll(() => {
+    global.fetch = realFetch;
+  })
   it('Should render personal data form and product card', () => {
     const component = render(<CheckoutPage order={order}/>);
     const nameInput = component.getByLabelText('Nombre');
@@ -136,6 +142,12 @@ describe('Checkout Page', () => {
 
   describe('handle responses', () => {
     let component: RenderResult;
+    const customer = {
+      name: 'Pepe',
+      lastname: 'Sapo',
+      address: {
+        address1: 'San Martin 123',
+      }}
 
     beforeEach(async () => {
       component = render(<CheckoutPage order={order}/>);
@@ -179,13 +191,15 @@ describe('Checkout Page', () => {
     afterEach(() => {jest.clearAllMocks()});
 
     it('Should navigate to success page when payment is successful', async () => {
-      (global.fetch as jest.Mock).mockResolvedValue({ ok: true });
+      const data = { customer, order }
+      const response = { json: () => Promise.resolve({data}) };
+      (global.fetch as jest.Mock).mockResolvedValue({ ok: true, ...response });
 
       await act(() => {
         fireEvent.click(component.getByText('Enviar'));
       });
-  
-      expect(assign).toHaveBeenCalledWith('http://localhost:3000/checkout/success')
+
+      expect(assign).toHaveBeenCalledWith('http://vercel.com/confirmacion-compra?productName=New+X-Men+%282001%29+%23150&img=http%3A%2F%2Fi.annihil.us%2Fu%2Fprod%2Fmarvel%2Fi%2Fmg%2Fd%2F10%2F577e6cfba4e76.jpg&orderPrice=10&address=San+Martin+123&name=Pepe+Sapo')
     });
   
     it('Should render error snackbar when card has not enough funds', async () => {

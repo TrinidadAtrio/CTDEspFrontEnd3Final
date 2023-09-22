@@ -1,24 +1,17 @@
 import type {GetServerSideProps, NextPage} from 'next'
 import Head from 'next/head'
-import BodySingle from "dh-marvel/components/layouts/body/single/body-single";
 import TextField from '@mui/material/TextField';
 import { Box, Typography, type SxProps, Stepper, Step, StepButton, StepLabel, Button, Paper, Grid, Collapse, Snackbar, Alert, Card, CardMedia, CardContent } from '@mui/material';
 import { useState } from 'react';
 import style from '../../styles/commons.module.css';
 import { useForm } from 'react-hook-form';
 import { CheckoutInput } from 'dh-marvel/features/checkout/checkout.types';
-import { GetStaticProps } from 'next';
 import { getComic } from 'dh-marvel/services/marvel/marvel.service';
-import LayoutCheckout from 'dh-marvel/components/layouts/layout-checkout';
-import { useRouter } from 'next/router';
-import { Cookies } from 'next/dist/server/web/spec-extension/cookies';
-import { rest } from 'msw';
 
-const checkoutURL = (() => {
-  const domain = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'http://vercel.com/';
-  const url = new URL('/api/checkout', domain)
-  return url.href;
-})();
+
+const domain = process.env.NODE_ENV === 'development' ? 'http://localhost:3000' : 'http://vercel.com/';
+
+const checkoutURL = new URL('/api/checkout', domain).href;
 
 const checkoutSteps = ['Datos personales', 'Entrega', 'Pago'];
 
@@ -27,17 +20,11 @@ interface ApiErrorResponse {
   message: string;
 }
 
-const CheckoutPage: NextPage = ({ order }) => {
-  const [activeStep, setActiveStep] = useState(0)
-  const [response, setResponse] = useState<ApiErrorResponse>();
-  const { register, handleSubmit, formState: { errors }, watch, trigger, clearErrors } = useForm<CheckoutInput>();
-  
-
 interface CheckoutPageProps {
   order: {
     name: string;
-    price: number;
     image: string;
+    price: number;
   }
 }
 
@@ -68,7 +55,7 @@ const CheckoutPage: NextPage<CheckoutPageProps> = ({ order }) => {
 
   const onSubmit = async (result: any) => {
     try {
-      const body = JSON.stringify({ ...result, ...order})
+      const body = JSON.stringify({ ...result, order})
       const res = await fetch(checkoutURL, {
         method: 'POST',
         headers: {
@@ -76,16 +63,23 @@ const CheckoutPage: NextPage<CheckoutPageProps> = ({ order }) => {
         },
         body
       })
-      const response = await res.json()
+
+      const responseData = await res.json();
       if (res.ok) {
-        window.location.assign('http://localhost:3000/checkout/success');
+        const { data } = responseData;
+        const { customer, order } = data as CheckoutInput;
+        const redirectURl = new URL('/confirmacion-compra', domain);
+
+        redirectURl.searchParams.set('productName', order.name);
+        redirectURl.searchParams.set('img', order.image);
+        redirectURl.searchParams.set('orderPrice', `${order.price}`);
+        redirectURl.searchParams.set('address', customer.address.address1);
+        redirectURl.searchParams.set('name', `${customer.name} ${customer.lastname}`);
+        window.location.assign(redirectURl.href);
       } else {
-        const error = await res.json();
-        setResponse(error);
+        setResponse(responseData as ApiErrorResponse);
       }
-    } catch (err) {
-      console.log(err);
-    }
+    } catch (err) {}
 
   }
 
@@ -233,19 +227,16 @@ const CheckoutPage: NextPage<CheckoutPageProps> = ({ order }) => {
 export const getServerSideProps: GetServerSideProps = async (context) => {
   const comicId = parseInt(context.params!.orderID as string);
   const comic = await getComic(comicId);
-  const image = comic.images[0];
 
   return {
     props: {
       order: {
         name: comic.title,
-        image: `${image.path}.${image.extension}`,
+        image: `${comic.thumbnail.path}.${comic.thumbnail.extension}`,
         price: comic.price,
       }
     },
   };
 };
 
-(CheckoutPage as any).Layout = LayoutCheckout
-
-export default CheckoutPage
+export default CheckoutPage;
